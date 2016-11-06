@@ -1,0 +1,17 @@
+nix:
+  packages:
+  - ncurses # intero needs this
+  - git     # stack needs this
+  - zlib
+
+resolver: lts-7.7
+packages:
+- './reflex-websockets'
+- './example'
+- location:
+    git: https://github.com/ElvishJerricco/reflex
+    commit: ceae3481fae840f96b6fb008fe6cdaf4f1ddf380
+extra-deps:
+- ref-tf-0.4.0.1
+flags: {}
+extra-package-dbs: []
