@@ -10,7 +10,7 @@ packages:
 - './example'
 - location:
     git: https://github.com/ElvishJerricco/reflex
-    commit: ceae3481fae840f96b6fb008fe6cdaf4f1ddf380
+    commit: 38d1c0b0646ff760043070d9cd1a21cb828cd78c
 extra-deps:
 - ref-tf-0.4.0.1
 flags: {}
