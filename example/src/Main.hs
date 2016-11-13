@@ -19,7 +19,8 @@ import Network.Wai.Handler.Warp
 import Network.Wai.Handler.WebSockets
 import Network.WebSockets
 import Reflex
-import Reflex.Base
+import Reflex.Spider.Internal
+       (HasSpiderTimeline, SpiderTimelineEnv)
 import Reflex.WebSocketServer
 import Servant
 
@@ -43,11 +44,12 @@ defaultWebSockets serverApp =
   websocketsOr defaultConnectionOptions serverApp $ \_ respond ->
     respond $ responseLBS status400 [] "Not a WebSocket request"
 
-mainWithTimeline :: SpiderTimeline x
-                 -> IO (ServerApp, ThreadId, ThreadId, ThreadId)
+mainWithTimeline
+  :: HasSpiderTimeline x
+  => SpiderTimelineEnv x -> IO (ServerApp, ThreadId, ThreadId, ThreadId)
 mainWithTimeline t = do
   (((messageState, triggerThread), serverApp), _, eventLoopThread) <-
-    runReflexBase' app t
+    runReflexBaseForTimeline' app t
   -- Print the current state every five seconds
   printThread <-
     forkIO . forever $ do

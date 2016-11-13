@@ -2,6 +2,7 @@ nix:
   packages:
   - ncurses # intero needs this
   - git     # stack needs this
+  - gmp
   - zlib
 
 resolver: lts-7.7
@@ -10,8 +11,9 @@ packages:
 - './example'
 - location:
     git: https://github.com/ElvishJerricco/reflex
-    commit: 38d1c0b0646ff760043070d9cd1a21cb828cd78c
+    commit: 62b68b481a74cfa5c028e5da809e4aa8d8642ec5
 extra-deps:
 - ref-tf-0.4.0.1
+- prim-uniq-0.1.0.1
 flags: {}
 extra-package-dbs: []
