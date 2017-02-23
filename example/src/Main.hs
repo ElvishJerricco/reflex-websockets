@@ -19,8 +19,6 @@ import Network.Wai.Handler.WebSockets
 import Network.WebSockets
 import Reflex
 import Reflex.Base
-import Reflex.Spider.Internal
-       (HasSpiderTimeline, SpiderTimelineEnv)
 import Reflex.WebSocketServer
 import Servant
 
@@ -29,27 +27,17 @@ type MyServer = "socket" :> Raw :<|> Raw
 main :: IO ()
 main = do
   putStrLn "Starting server on port 8080"
-  (serverApp, triggerThread, eventLoopThread) <-
-    withSpiderTimeline mainWithTimeline
-  let socketServer = defaultWebSockets serverApp
-      staticServer = serveDirectory "./static"
-      mainServer =
-        run 8080 . serve @MyServer Proxy $ socketServer :<|> staticServer
-      killThreads = traverse killThread [triggerThread, eventLoopThread]
-  finally mainServer killThreads
-
-defaultWebSockets :: ServerApp -> Application
-defaultWebSockets serverApp =
-  websocketsOr defaultConnectionOptions serverApp $ \_ respond ->
-    respond $ responseLBS status400 [] "Not a WebSocket request"
-
-mainWithTimeline
-  :: HasSpiderTimeline x
-  => SpiderTimelineEnv x -> IO (ServerApp, ThreadId, ThreadId)
-mainWithTimeline t = do
-  ((triggerThread, serverApp), _, eventLoopThread) <-
-    runReflexBaseForTimeline' app t
-  return (serverApp, triggerThread, eventLoopThread)
+  -- Build the websocket handler and get back the threads that need killing
+  ((triggerThread, serverApp), _, eventLoopThread) <- runReflexBase' app
+  let socketServer = websocketsOr defaultConnectionOptions serverApp $ \_ respond ->
+        respond $ responseLBS status400 [] "Not a WebSocket request"
+      mainServer = socketServer :<|> serveDirectory "./static"
+  -- Serve the websocket handler and static assets.
+  -- Make sure we kill those threads (this is important in GHCi)
+  -- TODO: Figure out how to use ResourceT to kill the threads?
+  finally (run 8080 $ serve @MyServer Proxy mainServer) $ do
+    killThread triggerThread
+    killThread eventLoopThread
 
 app
   :: ( MonadFix m
@@ -61,16 +49,19 @@ app
      )
   => m (ThreadId, ServerApp)
 app = do
+  -- Create an event that ticks once a second
   (tick, trigger) <- newTriggerEvent
   triggerThread <- liftIO . forkIO . forever $ trigger () >> threadDelay 1000000
-  -- ^ Create an event that ticks once a second
-  sockets $ \e -> do
-    messageState <- foldDyn (uncurry takeMessage) Map.empty e
-    -- ^ Keep all connections in a map
-    -- Every second, send each connection the last message they sent us
-    let messagesToSend = tag (current messageState) tick
-    performEvent_ $ fmap (liftIO . print) messagesToSend
-    return (triggerThread, messagesToSend)
+  -- Create a websocket handler
+  sockets $ \incomingMessages -> do
+    -- Keep all connections in a map.
+    -- Set values to the last received message.
+    -- Delete connections that disconnect.
+    messageState <- foldDyn (uncurry takeMessage) Map.empty incomingMessages
+    let outgoingMessages = tag (current messageState) tick
+    -- Every second, send each connection the last message they sent us and print it
+    performEvent_ $ fmap (liftIO . print) outgoingMessages
+    return (triggerThread, outgoingMessages)
   where
     takeMessage connId (ControlMessage (Close _ _)) = Map.delete connId
     takeMessage connId message = Map.insert connId message
