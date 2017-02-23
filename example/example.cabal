@@ -27,4 +27,7 @@ executable example
                      , wai
                      , http-types
                      , warp
+--------------------------------------------------------------------------------
+                     , dependent-sum
+                     , ref-tf
   default-language:    Haskell2010
