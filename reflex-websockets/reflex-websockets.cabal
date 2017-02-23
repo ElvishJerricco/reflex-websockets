@@ -16,12 +16,15 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Reflex.WebSocketServer
+                     , Reflex.Base
   build-depends:       base >= 4.9 && < 5
                      , containers
                      , lens
                      , reflex
                      , websockets
                      , async
+                     , ref-tf
+                     , dependent-sum
   ghc-options:         -Wall
   default-language:    Haskell2010
 
